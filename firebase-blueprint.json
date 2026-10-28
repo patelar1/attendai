@@ -1,0 +1,535 @@
+{
+  "entities": {
+    "Admin": {
+      "title": "Admin",
+      "description": "System administrator record for elevated RBAC privileges.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the administrator."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160,
+          "minLength": 3,
+          "description": "Verified administrator email."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp."
+        }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "College staff account (Admin, HOD, or Teacher) with role and department assignments.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique user identifier."
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID owning this profile."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "hod", "teacher"],
+          "maxLength": 20,
+          "minLength": 3,
+          "description": "Server-assigned role."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120,
+          "minLength": 1,
+          "description": "Full display name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160,
+          "minLength": 3,
+          "description": "Official college email address."
+        },
+        "mobile": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 7,
+          "description": "Contact mobile number."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether the account is active."
+        },
+        "mustChangePassword": {
+          "type": "boolean",
+          "description": "Whether password change is required on next login."
+        },
+        "department": {
+          "type": "string",
+          "maxLength": 60,
+          "minLength": 1,
+          "description": "Primary department code."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp."
+        }
+      },
+      "required": [
+        "id",
+        "ownerUid",
+        "role",
+        "name",
+        "email",
+        "mobile",
+        "active",
+        "mustChangePassword",
+        "department",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "Academic degree program such as B.Tech, BCA, MCA, MBA, or B.Com.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 24,
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120,
+          "minLength": 1
+        },
+        "durationYears": {
+          "type": "number"
+        },
+        "createdByUid": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "code", "name", "durationYears", "createdByUid", "createdAt", "updatedAt"]
+    },
+    "Branch": {
+      "title": "Branch",
+      "description": "Academic branch within a course (e.g., CSE, CSD, IT, EC, ME).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "courseId": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 24,
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120,
+          "minLength": 1
+        },
+        "createdByUid": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "courseId", "code", "name", "createdByUid", "createdAt", "updatedAt"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Enrolled college student record managed exclusively by HOD.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "courseId": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "branchId": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "year": {
+          "type": "number"
+        },
+        "rollNo": {
+          "type": "string",
+          "maxLength": 32,
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120,
+          "minLength": 1
+        },
+        "mobile": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 7
+        },
+        "guardianMobile": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 7
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160,
+          "minLength": 3
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive", "deleted"],
+          "maxLength": 20,
+          "minLength": 6
+        },
+        "createdByUid": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "courseId",
+        "branchId",
+        "year",
+        "rollNo",
+        "name",
+        "mobile",
+        "guardianMobile",
+        "email",
+        "status",
+        "createdByUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Daily student attendance record marked by assigned Teacher or HOD.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "studentId": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "courseId": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "branchId": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "year": {
+          "type": "number"
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 10,
+          "minLength": 10
+        },
+        "status": {
+          "type": "string",
+          "enum": ["present", "absent", "leave"],
+          "maxLength": 12,
+          "minLength": 5
+        },
+        "markedByUid": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "markedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "courseId",
+        "branchId",
+        "year",
+        "date",
+        "status",
+        "markedByUid",
+        "markedAt",
+        "updatedAt"
+      ]
+    },
+    "AbsentFollowup": {
+      "title": "AbsentFollowup",
+      "description": "AI voice call follow-up record for an absent student.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "attendanceId": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "studentId": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 10,
+          "minLength": 10
+        },
+        "phoneToCall": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 7
+        },
+        "callStatus": {
+          "type": "string",
+          "enum": ["pending", "calling", "answered", "unanswered", "failed", "opted_out"],
+          "maxLength": 20,
+          "minLength": 6
+        },
+        "attempts": {
+          "type": "number"
+        },
+        "reasonText": {
+          "type": "string",
+          "maxLength": 500,
+          "minLength": 0
+        },
+        "reasonCategory": {
+          "type": "string",
+          "enum": ["medical", "family", "transport", "personal", "other", "none"],
+          "maxLength": 20,
+          "minLength": 4
+        },
+        "transcript": {
+          "type": "string",
+          "maxLength": 4000,
+          "minLength": 0
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 300,
+          "minLength": 0
+        },
+        "language": {
+          "type": "string",
+          "enum": ["hi-IN", "en-IN"],
+          "maxLength": 10,
+          "minLength": 2
+        },
+        "updatedByUid": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "attendanceId",
+        "studentId",
+        "date",
+        "phoneToCall",
+        "callStatus",
+        "attempts",
+        "reasonText",
+        "reasonCategory",
+        "transcript",
+        "summary",
+        "language",
+        "updatedByUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable audit trail record of administrative, HOD, and teacher actions.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actorUid": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "action": {
+          "type": "string",
+          "maxLength": 80,
+          "minLength": 1
+        },
+        "entity": {
+          "type": "string",
+          "maxLength": 60,
+          "minLength": 1
+        },
+        "details": {
+          "type": "string",
+          "maxLength": 1000,
+          "minLength": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "actorUid", "action", "entity", "details", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminUid}": {
+      "schema": "Admin",
+      "description": "Trusted administrator lookup table."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Staff user accounts with PII isolated to owner and admin."
+    },
+    "/courses/{courseId}": {
+      "schema": "Course",
+      "description": "Academic degree courses."
+    },
+    "/branches/{branchId}": {
+      "schema": "Branch",
+      "description": "Academic branches under courses."
+    },
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Student directory records with PII protection."
+    },
+    "/attendance/{attendanceId}": {
+      "schema": "Attendance",
+      "description": "Daily attendance records."
+    },
+    "/absentFollowups/{followupId}": {
+      "schema": "AbsentFollowup",
+      "description": "AI call follow-up records and transcripts for absent students."
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Append-only audit trail."
+    }
+  }
+}

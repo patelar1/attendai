@@ -1,0 +1,6 @@
+{
+  "name": "ATTEND AI",
+  "description": "Smart College Attendance Management System with Automated AI Absentee Calling & Department Analytics",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

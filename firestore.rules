@@ -1,0 +1,336 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable Hardened Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isBootstrapAdmin() {
+      return isVerified() && request.auth.token.email == "chandraprakashchauhan157@gmail.com";
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        isBootstrapAdmin() ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isHod() {
+      return isVerified() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'hod' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.active == true;
+    }
+
+    function isTeacher() {
+      return isVerified() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.active == true;
+    }
+
+    // Validation Blueprints
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'createdAt']) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'ownerUid', 'role', 'name', 'email', 'mobile', 'active', 'mustChangePassword', 'department', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'ownerUid', 'role', 'name', 'email', 'mobile', 'active', 'mustChangePassword', 'department', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.ownerUid) &&
+        data.role is string && data.role.size() >= 3 && data.role.size() <= 20 &&
+        (data.role == 'admin' || data.role == 'hod' || data.role == 'teacher') &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.mobile is string && data.mobile.size() >= 7 && data.mobile.size() <= 20 &&
+        data.active is bool &&
+        data.mustChangePassword is bool &&
+        data.department is string && data.department.size() >= 1 && data.department.size() <= 60 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCourse(data) {
+      return data.keys().hasAll(['id', 'code', 'name', 'durationYears', 'createdByUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'code', 'name', 'durationYears', 'createdByUid', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        data.code is string && data.code.size() >= 1 && data.code.size() <= 24 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.durationYears is int && data.durationYears >= 1 && data.durationYears <= 6 &&
+        isValidId(data.createdByUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidBranch(data) {
+      return data.keys().hasAll(['id', 'courseId', 'code', 'name', 'createdByUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'courseId', 'code', 'name', 'createdByUid', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.courseId) &&
+        data.code is string && data.code.size() >= 1 && data.code.size() <= 24 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        isValidId(data.createdByUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidStudent(data) {
+      return data.keys().hasAll(['id', 'courseId', 'branchId', 'year', 'rollNo', 'name', 'mobile', 'guardianMobile', 'email', 'status', 'createdByUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'courseId', 'branchId', 'year', 'rollNo', 'name', 'mobile', 'guardianMobile', 'email', 'status', 'createdByUid', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.courseId) &&
+        isValidId(data.branchId) &&
+        data.year is int && data.year >= 1 && data.year <= 6 &&
+        data.rollNo is string && data.rollNo.size() >= 1 && data.rollNo.size() <= 32 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.mobile is string && data.mobile.size() >= 7 && data.mobile.size() <= 20 &&
+        data.guardianMobile is string && data.guardianMobile.size() >= 7 && data.guardianMobile.size() <= 20 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.status is string && data.status.size() >= 6 && data.status.size() <= 20 &&
+        (data.status == 'active' || data.status == 'inactive' || data.status == 'deleted') &&
+        isValidId(data.createdByUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAttendance(data) {
+      return data.keys().hasAll(['id', 'studentId', 'courseId', 'branchId', 'year', 'date', 'status', 'markedByUid', 'markedAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'studentId', 'courseId', 'branchId', 'year', 'date', 'status', 'markedByUid', 'markedAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.studentId) &&
+        isValidId(data.courseId) &&
+        isValidId(data.branchId) &&
+        data.year is int && data.year >= 1 && data.year <= 6 &&
+        data.date is string && data.date.size() == 10 &&
+        data.status is string && data.status.size() >= 5 && data.status.size() <= 12 &&
+        (data.status == 'present' || data.status == 'absent' || data.status == 'leave') &&
+        isValidId(data.markedByUid) &&
+        data.markedAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAbsentFollowup(data) {
+      return data.keys().hasAll(['id', 'attendanceId', 'studentId', 'date', 'phoneToCall', 'callStatus', 'attempts', 'reasonText', 'reasonCategory', 'transcript', 'summary', 'language', 'updatedByUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'attendanceId', 'studentId', 'date', 'phoneToCall', 'callStatus', 'attempts', 'reasonText', 'reasonCategory', 'transcript', 'summary', 'language', 'updatedByUid', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.attendanceId) &&
+        isValidId(data.studentId) &&
+        data.date is string && data.date.size() == 10 &&
+        data.phoneToCall is string && data.phoneToCall.size() >= 7 && data.phoneToCall.size() <= 20 &&
+        data.callStatus is string && data.callStatus.size() >= 6 && data.callStatus.size() <= 20 &&
+        (data.callStatus == 'pending' || data.callStatus == 'calling' || data.callStatus == 'answered' || data.callStatus == 'unanswered' || data.callStatus == 'failed' || data.callStatus == 'opted_out') &&
+        data.attempts is int && data.attempts >= 0 && data.attempts <= 10 &&
+        data.reasonText is string && data.reasonText.size() <= 500 &&
+        data.reasonCategory is string && data.reasonCategory.size() >= 4 && data.reasonCategory.size() <= 20 &&
+        (data.reasonCategory == 'medical' || data.reasonCategory == 'family' || data.reasonCategory == 'transport' || data.reasonCategory == 'personal' || data.reasonCategory == 'other' || data.reasonCategory == 'none') &&
+        data.transcript is string && data.transcript.size() <= 4000 &&
+        data.summary is string && data.summary.size() <= 300 &&
+        data.language is string && data.language.size() >= 2 && data.language.size() <= 10 &&
+        (data.language == 'hi-IN' || data.language == 'en-IN') &&
+        isValidId(data.updatedByUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['id', 'actorUid', 'action', 'entity', 'details', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'actorUid', 'action', 'entity', 'details', 'createdAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.actorUid) &&
+        data.action is string && data.action.size() >= 1 && data.action.size() <= 80 &&
+        data.entity is string && data.entity.size() >= 1 && data.entity.size() <= 60 &&
+        data.details is string && data.details.size() >= 1 && data.details.size() <= 1000 &&
+        data.createdAt is timestamp;
+    }
+
+    // /admins/{adminUid}
+    match /admins/{adminUid} {
+      allow get: if isVerified() && isValidId(adminUid) && (request.auth.uid == adminUid || isAdmin());
+      allow list: if isBootstrapAdmin() && existing().uid == request.auth.uid;
+      allow create: if isBootstrapAdmin() && isValidId(adminUid) && isValidAdmin(incoming()) &&
+        incoming().uid == adminUid &&
+        incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // /users/{userId} (PII Isolated to owner or admin)
+    match /users/{userId} {
+      allow get: if isVerified() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isVerified() && (existing().ownerUid == request.auth.uid || isBootstrapAdmin());
+      allow create: if isVerified() && isValidId(userId) && isValidUser(incoming()) &&
+        incoming().id == userId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isVerified() && isValidId(userId) && isValidUser(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (request.auth.uid == userId && incoming().role == existing().role && incoming().diff(existing()).affectedKeys().hasOnly(['mustChangePassword', 'updatedAt']))
+        );
+      allow delete: if isVerified() && isValidId(userId) && isAdmin();
+    }
+
+    // /courses/{courseId}
+    match /courses/{courseId} {
+      allow get: if isVerified() && isValidId(courseId) && (existing().createdByUid == request.auth.uid || isAdmin() || isHod() || isTeacher());
+      allow list: if isVerified() && (existing().createdByUid == request.auth.uid || isBootstrapAdmin());
+      allow create: if isVerified() && isValidId(courseId) && isValidCourse(incoming()) &&
+        incoming().id == courseId &&
+        incoming().createdByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || isHod());
+      allow update: if isVerified() && isValidId(courseId) && isValidCourse(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdByUid == existing().createdByUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (isHod() && incoming().diff(existing()).affectedKeys().hasOnly(['code', 'name', 'durationYears', 'updatedAt']))
+        );
+      allow delete: if isVerified() && isValidId(courseId) && (isAdmin() || isHod());
+    }
+
+    // /branches/{branchId}
+    match /branches/{branchId} {
+      allow get: if isVerified() && isValidId(branchId) && (existing().createdByUid == request.auth.uid || isAdmin() || isHod() || isTeacher());
+      allow list: if isVerified() && (existing().createdByUid == request.auth.uid || isBootstrapAdmin());
+      allow create: if isVerified() && isValidId(branchId) && isValidBranch(incoming()) &&
+        incoming().id == branchId &&
+        incoming().createdByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/courses/$(incoming().courseId)) &&
+        (isAdmin() || isHod());
+      allow update: if isVerified() && isValidId(branchId) && isValidBranch(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().courseId == existing().courseId &&
+        incoming().createdByUid == existing().createdByUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (isHod() && incoming().diff(existing()).affectedKeys().hasOnly(['code', 'name', 'updatedAt']))
+        );
+      allow delete: if isVerified() && isValidId(branchId) && (isAdmin() || isHod());
+    }
+
+    // /students/{studentId} (PII Isolated to creator, HOD, or Admin)
+    match /students/{studentId} {
+      allow get: if isVerified() && isValidId(studentId) && (existing().createdByUid == request.auth.uid || isAdmin() || isHod());
+      allow list: if isVerified() && (existing().createdByUid == request.auth.uid || isBootstrapAdmin());
+      allow create: if isVerified() && isValidId(studentId) && isValidStudent(incoming()) &&
+        incoming().id == studentId &&
+        incoming().createdByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/courses/$(incoming().courseId)) &&
+        exists(/databases/$(database)/documents/branches/$(incoming().branchId)) &&
+        (isAdmin() || isHod());
+      allow update: if isVerified() && isValidId(studentId) && isValidStudent(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdByUid == existing().createdByUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (isHod() && incoming().diff(existing()).affectedKeys().hasOnly(['rollNo', 'name', 'mobile', 'guardianMobile', 'email', 'year', 'status', 'updatedAt']))
+        );
+      allow delete: if isVerified() && isValidId(studentId) && isAdmin();
+    }
+
+    // /attendance/{attendanceId}
+    match /attendance/{attendanceId} {
+      allow get: if isVerified() && isValidId(attendanceId) && (existing().markedByUid == request.auth.uid || isAdmin() || isHod() || isTeacher());
+      allow list: if isVerified() && (existing().markedByUid == request.auth.uid || isBootstrapAdmin());
+      allow create: if isVerified() && isValidId(attendanceId) && isValidAttendance(incoming()) &&
+        incoming().id == attendanceId &&
+        incoming().markedByUid == request.auth.uid &&
+        incoming().markedAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/students/$(incoming().studentId)) &&
+        (isAdmin() || isHod() || isTeacher());
+      allow update: if isVerified() && isValidId(attendanceId) && isValidAttendance(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().studentId == existing().studentId &&
+        incoming().courseId == existing().courseId &&
+        incoming().branchId == existing().branchId &&
+        incoming().year == existing().year &&
+        incoming().date == existing().date &&
+        incoming().markedByUid == existing().markedByUid &&
+        incoming().markedAt == existing().markedAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          ((isHod() || (isTeacher() && existing().markedByUid == request.auth.uid)) && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))
+        );
+      allow delete: if isVerified() && isValidId(attendanceId) && isAdmin();
+    }
+
+    // /absentFollowups/{followupId}
+    match /absentFollowups/{followupId} {
+      allow get: if isVerified() && isValidId(followupId) && (existing().updatedByUid == request.auth.uid || isAdmin() || isHod());
+      allow list: if isVerified() && (existing().updatedByUid == request.auth.uid || isBootstrapAdmin());
+      allow create: if isVerified() && isValidId(followupId) && isValidAbsentFollowup(incoming()) &&
+        incoming().id == followupId &&
+        incoming().updatedByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/attendance/$(incoming().attendanceId)) &&
+        exists(/databases/$(database)/documents/students/$(incoming().studentId)) &&
+        (isAdmin() || isHod() || isTeacher());
+      allow update: if isVerified() && isValidId(followupId) && isValidAbsentFollowup(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().attendanceId == existing().attendanceId &&
+        incoming().studentId == existing().studentId &&
+        incoming().date == existing().date &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedByUid == request.auth.uid &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (existing().callStatus != 'opted_out' && (isHod() || isTeacher()) && incoming().diff(existing()).affectedKeys().hasOnly(['callStatus', 'attempts', 'reasonText', 'reasonCategory', 'transcript', 'summary', 'language', 'updatedByUid', 'updatedAt']))
+        );
+      allow delete: if isVerified() && isValidId(followupId) && (isAdmin() || isHod());
+    }
+
+    // /auditLogs/{logId}
+    match /auditLogs/{logId} {
+      allow get: if isVerified() && isValidId(logId) && (existing().actorUid == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (existing().actorUid == request.auth.uid || isBootstrapAdmin());
+      allow create: if isVerified() && isValidId(logId) && isValidAuditLog(incoming()) &&
+        incoming().id == logId &&
+        incoming().actorUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        (isAdmin() || isHod() || isTeacher());
+      allow update, delete: if false;
+    }
+  }
+}

@@ -1,0 +1,13 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+# Firebase private credentials
+attendai-service-account.json
+.env
+# Firebase Admin credentials
+attendai-service-account.json
